@@ -1,0 +1,64 @@
+services:
+  android:
+    image: redroid/redroid:${ANDROID_VERSION:-10}.0.0-latest
+    privileged: true
+    command:
+      - androidboot.redroid_width=${ANDROID_WIDTH:-540}
+      - androidboot.redroid_height=${ANDROID_HEIGHT:-960}
+      - androidboot.redroid_dpi=${ANDROID_DPI:-160}
+      - androidboot.redroid_fps=${ANDROID_FPS:-30}
+    volumes:
+      - android-data:/data
+    mem_limit: 1024m
+    restart: unless-stopped
+    networks:
+      - android-net
+
+  screen:
+    build:
+      context: ./screen
+    environment:
+      ANDROID_HOST: android
+      ANDROID_PORT: "5555"
+      DISPLAY: ":0"
+      SCREEN_WIDTH: ${ANDROID_WIDTH:-540}
+      SCREEN_HEIGHT: ${ANDROID_HEIGHT:-960}
+    expose:
+      - "6080"
+    mem_limit: 160m
+    restart: unless-stopped
+    depends_on:
+      - android
+    networks:
+      - android-net
+
+  web:
+    image: caddy:2-alpine
+    environment:
+      DOMAIN: ${DOMAIN:-icodedevs.biz.id}
+      BASIC_AUTH_USER: ${BASIC_AUTH_USER:?Set BASIC_AUTH_USER in .env}
+      BASIC_AUTH_HASH: ${BASIC_AUTH_HASH:?Set BASIC_AUTH_HASH in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./web:/srv:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    mem_limit: 96m
+    restart: unless-stopped
+    depends_on:
+      - screen
+    networks:
+      - android-net
+
+volumes:
+  android-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  android-net:
+    driver: bridge

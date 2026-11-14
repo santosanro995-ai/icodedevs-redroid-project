@@ -1,0 +1,24 @@
+{$DOMAIN} {
+	encode zstd gzip
+
+	basic_auth {
+		{$BASIC_AUTH_USER} {$BASIC_AUTH_HASH}
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		Permissions-Policy camera=(), microphone=(), geolocation=()
+	}
+
+	handle /remote/* {
+		uri strip_prefix /remote
+		reverse_proxy screen:6080
+	}
+
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}
